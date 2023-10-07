@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task List</title>
+    <style>
+        #signoutButton {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+    </style>
+</head>
+<body>
+<h1>Task 목록</h1>
+<button id="signoutButton" onclick="signout()">탈퇴하기</button>
+
+<h2>최근 작업중인 목록</h2>
+<ul id="recentTaskList">
+</ul>
+
+<hr/>
+
+<form id="taskForm">
+    <label for="title">제목</label>
+    <input type="text" id="title"/>
+
+    <label for="content">내용</label>
+    <input type="text" id="content"/>
+
+    <label for="progress">진행상태</label>
+    <select id="progress">
+        <option value="TODO">TODO</option>
+        <option value="DOING">DOING</option>
+        <option value="DONE">DONE</option>
+    </select>
+
+    <button type="submit">Save Task</button>
+</form>
+
+<hr/>
+
+<ul id="taskList">
+</ul>
+
+<script>
+    async function signout() {
+        const response = await fetch('/auth/signout', {
+            method: 'POST',
+        });
+
+        if (!response.ok) {
+            alert('Error signing out');
+        } else {
+            alert('Successfully signed out');
+            window.location.href = '/';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const recentTaskList = document.getElementById('recentTaskList');
+        const form = document.getElementById('taskForm');
+        const taskList = document.getElementById('taskList');
+
+        fetchTasks();
+        fetchRecentTasks();
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const title = form.title.value;
+            const content = form.content.value;
+            const progress = form.progress.value;
+
+            addTask({ title, content, progress })
+                .then(() => {
+                    fetchTasks();
+                    fetchRecentTasks();
+                });
+        });
+
+        async function fetchTasks() {
+            const response = await fetch('/auth/tasks');
+            const tasks = await response.json();
+
+            taskList.innerHTML = '';
+
+            for (const task of tasks) {
+                const li = document.createElement('li');
+                li.textContent = `${task.title} - ${task.content} - ${task.progress}`;
+
+                ['TODO', 'DOING', 'DONE'].forEach(progressState => {
+                    const button = document.createElement('button');
+                    button.textContent = progressState;
+                    button.addEventListener('click', () => updateTaskProgress(task.id, progressState));
+                    li.append(button);
+                });
+
+                taskList.append(li);
+            }
+        }
+
+        async function fetchRecentTasks() {
+            const response = await fetch('/auth/tasks/recently');
+            const recentTasks = await response.json();
+
+            recentTaskList.innerHTML = '';
+
+            for (const task of recentTasks) {
+                const li = document.createElement('li');
+                li.textContent = `${task.title} - ${task.content} - ${task.progress}`;
+                recentTaskList.append(li);
+            }
+        }
+
+        async function addTask(task) {
+            const response = await fetch('/auth/tasks', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(task),
+            });
+
+            if (!response.ok) {
+                throw new Error('Error adding task');
+            }
+        }
+
+        async function updateTaskProgress(taskId, progress) {
+            const response = await fetch(`/auth/tasks/${taskId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ progress }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Error updating task progress');
+            }
+
+            fetchTasks();
+            fetchRecentTasks();
+        }
+    });
+</script>
+</body>
+</html>

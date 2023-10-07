@@ -1,0 +1,28 @@
+
+spring:
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+  h2:
+    console:
+      enabled: true
+      path: /public/h2-console
+      settings:
+        web-allow-others: true
+  datasource:
+    url: jdbc:h2:mem:testdb
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jackson:
+    serialization:
+      fail-on-empty-beans: false
+
+logging:
+  level:
+    org:
+      springframework:
+        security: DEBUG
